@@ -3,9 +3,16 @@
  * @module routes/orderRoutes
  */
 
-const express = require("express");
-const router = express.Router();
-const orderController = require("../controllers/orderController");
+import { Router } from "express";
+const router = Router();
+import {
+  createOrder,
+  getOrderById,
+  listOrders,
+  updateOrder,
+  deleteOrder,
+} from "../controllers/orderController";
+const { authenticateToken, requireAdmin } = require("../middlewares/auth");
 
 // =====================================================
 // ROTAS OBRIGATÓRIAS
@@ -18,7 +25,7 @@ const orderController = require("../controllers/orderController");
  * @body    { numeroPedido, valorTotal, dataCriacao, items }
  * @returns {Object} Pedido criado
  */
-router.post("/order", orderController.createOrder);
+router.post("/order", authenticateToken, createOrder);
 
 /**
  * @route   GET /order/:orderId
@@ -27,7 +34,7 @@ router.post("/order", orderController.createOrder);
  * @param   {string} orderId - ID do pedido
  * @returns {Object} Pedido encontrado
  */
-router.get("/order/:orderId", orderController.getOrderById);
+router.get("/order/:orderId", authenticateToken, getOrderById);
 
 // =====================================================
 // ROTAS OPCIONAIS
@@ -41,7 +48,7 @@ router.get("/order/:orderId", orderController.getOrderById);
  * @query   {number} limit - Itens por página (default: 10)
  * @returns {Array} Lista de pedidos
  */
-router.get("/order/list", orderController.listOrders);
+router.get("/order/list", authenticateToken, listOrders);
 
 /**
  * @route   PUT /order/:orderId
@@ -51,7 +58,7 @@ router.get("/order/list", orderController.listOrders);
  * @body    { numeroPedido, valorTotal, dataCriacao, items }
  * @returns {Object} Pedido atualizado
  */
-router.put("/order/:orderId", orderController.updateOrder);
+router.put("/order/:orderId", authenticateToken, updateOrder);
 
 /**
  * @route   DELETE /order/:orderId
@@ -60,7 +67,7 @@ router.put("/order/:orderId", orderController.updateOrder);
  * @param   {string} orderId - ID do pedido
  * @returns {Object} Mensagem de confirmação
  */
-router.delete("/order/:orderId", orderController.deleteOrder);
+router.delete("/order/:orderId", authenticateToken, deleteOrder);
 
 // =====================================================
 // MIDDLEWARE DE VALIDAÇÃO DE PARÂMETROS (opcional)
@@ -80,4 +87,6 @@ router.param("orderId", (req, res, next, orderId) => {
   next();
 });
 
-module.exports = router;
+router.post("/login", authController.login);
+
+export default router;
