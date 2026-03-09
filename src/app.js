@@ -7,6 +7,9 @@ const express = require("express");
 const cors = require("cors");
 const orderRoutes = require("./routes/orderRoutes").default;
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
+
 const app = express();
 
 // =====================================================
@@ -119,5 +122,12 @@ app.use((err, req, res, next) => {
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
+
+//Documentação Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+    explorer: true,
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'API de Pedidos - Documentação'
+}));
 
 module.exports = app;
