@@ -1,0 +1,36 @@
+{
+  "name": "jitterbit",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedroheribeiro2021/jitterbit.git"
+  },
+  "keywords": [
+    "api",
+    "nodejs",
+    "postgresql",
+    "orders"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pedroheribeiro2021/jitterbit/issues"
+  },
+  "homepage": "https://github.com/pedroheribeiro2021/jitterbit#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
