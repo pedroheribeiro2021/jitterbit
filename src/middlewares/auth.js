@@ -2,8 +2,7 @@
  * Middleware de autenticação JWT
  * @module middlewares/auth
  */
-
-import { sign, verify } from "jsonwebtoken";
+const jwt = require('jsonwebtoken');
 require("dotenv").config();
 
 // Usuários mockados (em produção, viriam do banco de dados)
@@ -28,7 +27,7 @@ const users = [
  * @returns {string} Token JWT
  */
 const generateToken = (user) => {
-  return sign(
+  return jwt.sign(
     {
       id: user.id,
       username: user.username,
@@ -59,7 +58,7 @@ const authenticateToken = (req, res, next) => {
     });
   }
 
-  verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       if (err.name === "TokenExpiredError") {
         return res.status(403).json({
@@ -138,8 +137,7 @@ const login = (req, res) => {
       token,
       user: {
         id: user.id,
-        username: user.username,
-        role: user.role,
+        username: user.username
       },
     },
     timestamp: new Date().toISOString(),

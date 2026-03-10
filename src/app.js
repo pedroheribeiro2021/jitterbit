@@ -5,10 +5,10 @@
 
 const express = require("express");
 const cors = require("cors");
-const orderRoutes = require("./routes/orderRoutes").default;
+const orderRoutes = require("./routes/orderRoutes");
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./config/swagger');
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpecs = require("./config/swagger");
 
 const app = express();
 
@@ -51,6 +51,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// =====================================================
+// DOCUMENTAÇÃO SWAGGER
+// =====================================================
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpecs, {
+    explorer: true,
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "API de Pedidos - Documentação",
+  }),
+);
+
 // ROTAS DA API
 app.use("/", orderRoutes);
 
@@ -84,7 +97,7 @@ app.get("/", (req, res) => {
 });
 
 // TRATAMENTO DE ROTAS NÃO ENCONTRADAS (404)
-app.use("*", (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     error: "Rota não encontrada",
     message: `A rota ${req.method} ${req.originalUrl} não existe`,
@@ -105,7 +118,7 @@ app.use("*", (req, res) => {
 // MIDDLEWARE DE TRATAMENTO DE ERROS GLOBAL
 // =====================================================
 app.use((err, req, res, next) => {
-  console.error("🔥 Erro não tratado:", {
+  console.error("Erro não tratado:", {
     message: err.message,
     stack: err.stack,
     timestamp: new Date().toISOString(),
@@ -122,12 +135,5 @@ app.use((err, req, res, next) => {
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 });
-
-//Documentação Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-    explorer: true,
-    customCss: '.swagger-ui .topbar { display: none }',
-    customSiteTitle: 'API de Pedidos - Documentação'
-}));
 
 module.exports = app;

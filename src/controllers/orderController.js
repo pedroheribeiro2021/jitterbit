@@ -14,97 +14,49 @@ const createOrder = async (req, res) => {
   const client = await db.pool.connect();
 
   try {
-    // Iniciar transação
-    await client.query("BEGIN");
+    const { numeroPedido, valorTotal, dataCriacao, items } = req.body;
 
-    // Mapear dados recebidos
-    const orderData = mapper.mapOrderData(req.body);
-
-    // Verificar se pedido já existe
-    const checkQuery = "SELECT order_id FROM orders WHERE order_id = $1";
-    const checkResult = await client.query(checkQuery, [orderData.orderId]);
-
-    if (checkResult.rows.length > 0) {
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        error: "Conflito",
-        message: `Já existe um pedido com o ID ${orderData.orderId}`,
-        timestamp: new Date().toISOString(),
+    if (!numeroPedido || !valorTotal || !dataCriacao || !items) {
+      return res.status(400).json({
+        error: "Requisição inválida",
+        message:
+          "Campos obrigatórios ausentes: numeroPedido, valorTotal, dataCriacao",
       });
     }
 
-    // Inserir na tabela orders
-    const orderQuery = `
-            INSERT INTO orders (order_id, value, creation_date)
-            VALUES ($1, $2, $3)
-            RETURNING *
-        `;
+    await client.query("BEGIN");
 
-    const orderResult = await client.query(orderQuery, [
-      orderData.orderId,
-      orderData.value,
-      orderData.creationDate,
-    ]);
-
-    // Inserir items
-    const itemsQuery = `
-            INSERT INTO items (order_id, product_id, quantity, price)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, product_id, quantity, price
-        `;
-
-    const itemsPromises = orderData.items.map((item) =>
-      client.query(itemsQuery, [
-        orderData.orderId,
-        item.productId,
-        item.quantity,
-        item.price,
-      ]),
+    await client.query(
+      `
+      INSERT INTO orders (order_id, value, creation_date)
+      VALUES ($1,$2,$3)
+      `,
+      [numeroPedido, valorTotal, dataCriacao],
     );
 
-    const itemsResults = await Promise.all(itemsPromises);
+    for (const item of items) {
+      await client.query(
+        `
+        INSERT INTO items (order_id, product_id, quantity, price)
+        VALUES ($1,$2,$3,$4)
+        `,
+        [numeroPedido, item.idItem, item.quantidadelItem, item.valorItem],
+      );
+    }
 
-    // Commit da transação
     await client.query("COMMIT");
-
-    // Mapear resposta
-    const response = mapper.mapToResponse(
-      orderResult.rows[0],
-      itemsResults.map((r) => r.rows[0]),
-    );
 
     res.status(201).json({
       success: true,
       message: "Pedido criado com sucesso",
-      data: response,
-      timestamp: new Date().toISOString(),
+      data: req.body,
     });
   } catch (error) {
-    // Rollback em caso de erro
     await client.query("ROLLBACK");
 
-    console.error("❌ Erro ao criar pedido:", {
-      error: error.message,
-      body: req.body,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Determinar status code baseado no tipo de erro
-    let statusCode = 500;
-    let errorMessage = "Erro interno do servidor";
-
-    if (
-      error.message.includes("obrigatórios") ||
-      error.message.includes("inválido")
-    ) {
-      statusCode = 400;
-      errorMessage = "Dados inválidos";
-    }
-
-    res.status(statusCode).json({
-      error: errorMessage,
+    res.status(500).json({
+      error: "Erro ao criar pedido",
       message: error.message,
-      timestamp: new Date().toISOString(),
     });
   } finally {
     client.release();
@@ -240,108 +192,64 @@ const updateOrder = async (req, res) => {
   const client = await db.pool.connect();
 
   try {
-    await client.query("BEGIN");
+    const { numeroPedido, valorTotal, dataCriacao, items } = req.body;
 
-    // Validar orderId
-    if (!orderId || orderId.trim() === "") {
-      await client.query("ROLLBACK");
+    if (!numeroPedido || !valorTotal || !dataCriacao) {
       return res.status(400).json({
-        error: "Requisição inválida",
-        message: "ID do pedido é obrigatório",
-        timestamp: new Date().toISOString(),
+        error: "Dados inválidos",
+        message:
+          "Campos obrigatórios ausentes: numeroPedido, valorTotal, dataCriacao",
       });
     }
 
-    // Verificar se pedido existe
-    const checkQuery = "SELECT * FROM orders WHERE order_id = $1";
-    const checkResult = await client.query(checkQuery, [orderId]);
+    await client.query("BEGIN");
 
-    if (checkResult.rows.length === 0) {
+    const check = await client.query("SELECT * FROM orders WHERE order_id=$1", [
+      orderId,
+    ]);
+
+    if (check.rows.length === 0) {
       await client.query("ROLLBACK");
+
       return res.status(404).json({
         error: "Não encontrado",
         message: `Pedido com ID ${orderId} não encontrado`,
-        timestamp: new Date().toISOString(),
       });
     }
 
-    // Mapear novos dados
-    const orderData = mapper.mapOrderData(req.body);
-
-    // Atualizar pedido
-    const updateOrderQuery = `
-            UPDATE orders 
-            SET value = $2, creation_date = $3, updated_at = CURRENT_TIMESTAMP
-            WHERE order_id = $1
-            RETURNING *
-        `;
-
-    const orderResult = await client.query(updateOrderQuery, [
-      orderId,
-      orderData.value,
-      orderData.creationDate,
-    ]);
-
-    // Remover items antigos
-    await client.query("DELETE FROM items WHERE order_id = $1", [orderId]);
-
-    // Inserir novos items
-    const itemsQuery = `
-            INSERT INTO items (order_id, product_id, quantity, price)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, product_id, quantity, price
-        `;
-
-    const itemsPromises = orderData.items.map((item) =>
-      client.query(itemsQuery, [
-        orderId,
-        item.productId,
-        item.quantity,
-        item.price,
-      ]),
+    await client.query(
+      `
+      UPDATE orders
+      SET value=$2, creation_date=$3, updated_at=CURRENT_TIMESTAMP
+      WHERE order_id=$1
+      `,
+      [orderId, valorTotal, dataCriacao],
     );
 
-    const itemsResults = await Promise.all(itemsPromises);
+    await client.query("DELETE FROM items WHERE order_id=$1", [orderId]);
+
+    for (const item of items) {
+      await client.query(
+        `
+        INSERT INTO items (order_id, product_id, quantity, price)
+        VALUES ($1,$2,$3,$4)
+        `,
+        [orderId, item.idItem, item.quantidadelItem, item.valorItem],
+      );
+    }
 
     await client.query("COMMIT");
 
-    // Mapear resposta
-    const response = mapper.mapToResponse(
-      orderResult.rows[0],
-      itemsResults.map((r) => r.rows[0]),
-    );
-
-    res.status(200).json({
+    res.json({
       success: true,
       message: "Pedido atualizado com sucesso",
-      data: response,
-      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error("❌ Erro ao atualizar pedido:", {
-      error: error.message,
-      orderId: req.params.orderId,
-      body: req.body,
-      timestamp: new Date().toISOString(),
-    });
-
-    let statusCode = 500;
-    let errorMessage = "Erro interno do servidor";
-
-    if (
-      error.message.includes("obrigatórios") ||
-      error.message.includes("inválido")
-    ) {
-      statusCode = 400;
-      errorMessage = "Dados inválidos";
-    }
-
-    res.status(statusCode).json({
-      error: errorMessage,
+    res.status(500).json({
+      error: "Erro ao atualizar pedido",
       message: error.message,
-      timestamp: new Date().toISOString(),
     });
   } finally {
     client.release();

@@ -9,16 +9,16 @@
  * @returns {string} Order ID sem sufixo
  */
 const extractOrderId = (numeroPedido) => {
-    if (!numeroPedido || typeof numeroPedido !== 'string') {
-        throw new Error('Número do pedido inválido');
-    }
-    
-    // Se tiver hífen, pega a parte antes do hífen
-    if (numeroPedido.includes('-')) {
-        return numeroPedido.split('-')[0];
-    }
-    
-    return numeroPedido;
+  if (!numeroPedido || typeof numeroPedido !== "string") {
+    throw new Error("Número do pedido inválido");
+  }
+
+  // Se tiver hífen, pega a parte antes do hífen
+  if (numeroPedido.includes("-")) {
+    return numeroPedido.split("-")[0];
+  }
+
+  return numeroPedido;
 };
 
 /**
@@ -27,19 +27,19 @@ const extractOrderId = (numeroPedido) => {
  * @returns {string} Data no formato ISO
  */
 const parseDate = (dataString) => {
-    if (!dataString) {
-        throw new Error('Data de criação é obrigatória');
+  if (!dataString) {
+    throw new Error("Data de criação é obrigatória");
+  }
+
+  try {
+    const date = new Date(dataString);
+    if (isNaN(date.getTime())) {
+      throw new Error("Data inválida");
     }
-    
-    try {
-        const date = new Date(dataString);
-        if (isNaN(date.getTime())) {
-            throw new Error('Data inválida');
-        }
-        return date.toISOString();
-    } catch (error) {
-        throw new Error(`Erro ao processar data: ${error.message}`);
-    }
+    return date.toISOString();
+  } catch (error) {
+    throw new Error(`Erro ao processar data: ${error.message}`);
+  }
 };
 
 /**
@@ -49,17 +49,17 @@ const parseDate = (dataString) => {
  * @returns {number} Valor numérico
  */
 const parseNumber = (value, fieldName) => {
-    const num = Number(value);
-    
-    if (isNaN(num)) {
-        throw new Error(`${fieldName} deve ser um número válido`);
-    }
-    
-    if (num < 0) {
-        throw new Error(`${fieldName} não pode ser negativo`);
-    }
-    
-    return num;
+  const num = Number(value);
+
+  if (isNaN(num)) {
+    throw new Error(`${fieldName} deve ser um número válido`);
+  }
+
+  if (num < 0) {
+    throw new Error(`${fieldName} não pode ser negativo`);
+  }
+
+  return num;
 };
 
 /**
@@ -68,66 +68,73 @@ const parseNumber = (value, fieldName) => {
  * @returns {Object} Dados mapeados para o banco
  */
 const mapOrderData = (requestData) => {
-    // Validação básica
-    if (!requestData) {
-        throw new Error('Dados do pedido não fornecidos');
-    }
+  // Validação básica
+  if (!requestData) {
+    throw new Error("Dados do pedido não fornecidos");
+  }
 
-    // Validação de campos obrigatórios
-    const requiredFields = ['numeroPedido', 'valorTotal', 'dataCriacao', 'items'];
-    const missingFields = requiredFields.filter(field => !requestData[field]);
-    
-    if (missingFields.length > 0) {
-        throw new Error(`Campos obrigatórios ausentes: ${missingFields.join(', ')}`);
-    }
+  // Validação de campos obrigatórios
+  const requiredFields = ["numeroPedido", "valorTotal", "dataCriacao", "items"];
+  const missingFields = requiredFields.filter((field) => !requestData[field]);
 
-    if (!Array.isArray(requestData.items) || requestData.items.length === 0) {
-        throw new Error('Items devem ser um array não vazio');
-    }
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Campos obrigatórios ausentes: ${missingFields.join(", ")}`,
+    );
+  }
 
-    try {
-        // Extrair orderId
-        const orderId = extractOrderId(requestData.numeroPedido);
-        
-        // Processar data
-        const creationDate = parseDate(requestData.dataCriacao);
-        
-        // Processar valor total
-        const value = parseNumber(requestData.valorTotal, 'valorTotal');
+  if (!Array.isArray(requestData.items) || requestData.items.length === 0) {
+    throw new Error("Items devem ser um array não vazio");
+  }
 
-        // Processar items
-        const items = requestData.items.map((item, index) => {
-            try {
-                return {
-                    productId: parseNumber(item.idItem, `items[${index}].idItem`),
-                    quantity: parseNumber(item.quantidadelItem, `items[${index}].quantidadelItem`),
-                    price: parseNumber(item.valorItem, `items[${index}].valorItem`)
-                };
-            } catch (error) {
-                throw new Error(`Erro no item ${index + 1}: ${error.message}`);
-            }
-        });
+  try {
+    // Extrair orderId
+    const orderId = extractOrderId(requestData.numeroPedido);
 
-        // Calcular valor total baseado nos itens (validação)
-        const calculatedTotal = items.reduce((sum, item) => 
-            sum + (item.quantity * item.price), 0
-        );
+    // Processar data
+    const creationDate = parseDate(requestData.dataCriacao);
 
-        // Se houver diferença significativa, avisar (mas não bloquear)
-        if (Math.abs(calculatedTotal - value) > 0.01) {
-            console.warn(`⚠️ Valor total (${value}) difere do calculado pelos itens (${calculatedTotal})`);
-        }
+    // Processar valor total
+    const value = parseNumber(requestData.valorTotal, "valorTotal");
 
+    // Processar items
+    const items = requestData.items.map((item, index) => {
+      try {
         return {
-            orderId,
-            value,
-            creationDate,
-            items
+          productId: parseNumber(item.idItem, `items[${index}].idItem`),
+          quantity: parseNumber(
+            item.quantidadelItem,
+            `items[${index}].quantidadelItem`,
+          ),
+          price: parseNumber(item.valorItem, `items[${index}].valorItem`),
         };
+      } catch (error) {
+        throw new Error(`Erro no item ${index + 1}: ${error.message}`);
+      }
+    });
 
-    } catch (error) {
-        throw new Error(`Erro ao mapear dados: ${error.message}`);
+    // Calcular valor total baseado nos itens (validação)
+    const calculatedTotal = items.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0,
+    );
+
+    // Se houver diferença significativa, avisar (mas não bloquear)
+    if (Math.abs(calculatedTotal - value) > 0.01) {
+      console.warn(
+        `⚠️ Valor total (${value}) difere do calculado pelos itens (${calculatedTotal})`,
+      );
     }
+
+    return {
+      orderId,
+      value,
+      creationDate,
+      items,
+    };
+  } catch (error) {
+    throw new Error(`Erro ao mapear dados: ${error.message}`);
+  }
 };
 
 /**
@@ -137,25 +144,25 @@ const mapOrderData = (requestData) => {
  * @returns {Object} Dados formatados para resposta
  */
 const mapToResponse = (dbOrder, dbItems = []) => {
-    return {
-        orderId: dbOrder.order_id,
-        value: parseFloat(dbOrder.value),
-        creationDate: dbOrder.creation_date,
-        items: dbItems.map(item => ({
-            productId: item.product_id,
-            quantity: item.quantity,
-            price: parseFloat(item.price),
-            id: item.id
-        })),
-        createdAt: dbOrder.created_at,
-        updatedAt: dbOrder.updated_at
-    };
+  return {
+    orderId: dbOrder.order_id,
+    value: parseFloat(dbOrder.value),
+    creationDate: dbOrder.creation_date,
+    items: dbItems.map((item) => ({
+      productId: item.product_id,
+      quantity: item.quantity,
+      price: parseFloat(item.price),
+      id: item.id,
+    })),
+    createdAt: dbOrder.created_at,
+    updatedAt: dbOrder.updated_at,
+  };
 };
 
-export default {
-    extractOrderId,
-    parseDate,
-    parseNumber,
-    mapOrderData,
-    mapToResponse
+module.exports = {
+  extractOrderId,
+  parseDate,
+  parseNumber,
+  mapOrderData,
+  mapToResponse,
 };

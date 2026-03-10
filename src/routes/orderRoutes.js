@@ -1,79 +1,50 @@
 /**
  * Rotas da API de pedidos
- * @module routes/orderRoutes
  */
 
-import { Router } from "express";
-const router = Router();
-import {
+const express = require("express");
+const router = express.Router();
+
+const {
   createOrder,
   getOrderById,
   listOrders,
   updateOrder,
   deleteOrder,
-} from "../controllers/orderController";
-const { authenticateToken, requireAdmin } = require("../middlewares/auth");
+} = require("../controllers/orderController");
+
+const { authenticateToken, login } = require("../middlewares/auth");
+
+// =====================================================
+// ROTAS DE AUTENTICAÇÃO
+// =====================================================
+
+router.post("/login", login);
 
 // =====================================================
 // ROTAS OBRIGATÓRIAS
 // =====================================================
 
-/**
- * @route   POST /order
- * @desc    Criar um novo pedido
- * @access  Public
- * @body    { numeroPedido, valorTotal, dataCriacao, items }
- * @returns {Object} Pedido criado
- */
 router.post("/order", authenticateToken, createOrder);
 
-/**
- * @route   GET /order/:orderId
- * @desc    Obter pedido por ID
- * @access  Public
- * @param   {string} orderId - ID do pedido
- * @returns {Object} Pedido encontrado
- */
+// IMPORTANTE: LIST vem antes do :orderId
+router.get("/order/list", authenticateToken, listOrders);
+
 router.get("/order/:orderId", authenticateToken, getOrderById);
 
 // =====================================================
 // ROTAS OPCIONAIS
 // =====================================================
 
-/**
- * @route   GET /order/list
- * @desc    Listar todos os pedidos com paginação
- * @access  Public
- * @query   {number} page - Número da página (default: 1)
- * @query   {number} limit - Itens por página (default: 10)
- * @returns {Array} Lista de pedidos
- */
-router.get("/order/list", authenticateToken, listOrders);
-
-/**
- * @route   PUT /order/:orderId
- * @desc    Atualizar pedido existente
- * @access  Public
- * @param   {string} orderId - ID do pedido
- * @body    { numeroPedido, valorTotal, dataCriacao, items }
- * @returns {Object} Pedido atualizado
- */
 router.put("/order/:orderId", authenticateToken, updateOrder);
 
-/**
- * @route   DELETE /order/:orderId
- * @desc    Deletar pedido
- * @access  Public
- * @param   {string} orderId - ID do pedido
- * @returns {Object} Mensagem de confirmação
- */
 router.delete("/order/:orderId", authenticateToken, deleteOrder);
 
 // =====================================================
-// MIDDLEWARE DE VALIDAÇÃO DE PARÂMETROS (opcional)
+// VALIDAÇÃO orderId
 // =====================================================
+
 router.param("orderId", (req, res, next, orderId) => {
-  // Validar formato do orderId (ex: v10089016vdb)
   const orderIdRegex = /^[a-zA-Z0-9]+$/;
 
   if (!orderIdRegex.test(orderId)) {
@@ -87,6 +58,111 @@ router.param("orderId", (req, res, next, orderId) => {
   next();
 });
 
-router.post("/login", authController.login);
+/**
+ * @swagger
+ * tags:
+ *   name: Orders
+ *   description: Gerenciamento de pedidos
+ */
 
-export default router;
+/**
+ * @swagger
+ * /order:
+ *   post:
+ *     summary: Criar um pedido
+ *     tags: [Orders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               numeroPedido:
+ *                 type: string
+ *               valorTotal:
+ *                 type: number
+ *               dataCriacao:
+ *                 type: string
+ *                 format: date-time
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     idItem:
+ *                       type: integer
+ *                     quantidadelItem:
+ *                       type: integer
+ *                     valorItem:
+ *                       type: number
+ *     responses:
+ *       201:
+ *         description: Pedido criado com sucesso
+ */
+
+/**
+ * @swagger
+ * /order/{orderId}:
+ *   get:
+ *     summary: Buscar pedido por ID
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido encontrado
+ *       404:
+ *         description: Pedido não encontrado
+ */
+
+/**
+ * @swagger
+ * /order/list:
+ *   get:
+ *     summary: Listar pedidos
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: Lista de pedidos
+ */
+
+/**
+ * @swagger
+ * /order/{orderId}:
+ *   put:
+ *     summary: Atualizar pedido
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido atualizado
+ */
+
+/**
+ * @swagger
+ * /order/{orderId}:
+ *   delete:
+ *     summary: Deletar pedido
+ *     tags: [Orders]
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Pedido removido
+ */
+
+module.exports = router;

@@ -85,8 +85,19 @@ INSERT INTO items (order_id, product_id, quantity, price) VALUES
 ('v10089017vdb', 2436, 3, 8333.33);
 
 -- =====================================================
+-- TABELA: users
+-- =====================================================
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_username ON users(username);
+
+-- =====================================================
 -- VERIFICAÇÃO
 -- =====================================================
-SELECT 'Banco de dados criado com sucesso!' as status;
 SELECT COUNT(*) as total_orders FROM orders;
 SELECT COUNT(*) as total_items FROM items;
